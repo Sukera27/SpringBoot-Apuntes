@@ -30,7 +30,6 @@ src/
      │    ├── controller/      → Controladores REST
      │    ├── service/         → Interfaces y lógica de negocio
      │    ├── service/impl/    → Implementaciones de servicios
-     │    ├── dto/             → Clases DTO
      │    ├── persistance/
      │    │    ├── model/      → Entidades JPA
      │    │    └── repository/ → Repositorios JPA
@@ -52,26 +51,25 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id", nullable = false, unique = true)
-    Integer userId;
+    Long userId;
 
     @Column(name = "username", nullable = false, unique = true, length = 20)
     String username;
-
+  
     @Column(name = "password", nullable = false)
     String password;
 
     @Column(name = "email", nullable = false, unique = true, length = 90)
     String email;
 
+
     @OneToOne(mappedBy = "owner", fetch = FetchType.LAZY)
     Dni documentDni;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "users_bought_productos",
-        joinColumns = @JoinColumn(name = "Users_user_id", referencedColumnName = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "productos_producto_id", referencedColumnName = "producto_id")
-    )
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name="users_bought_productos", 
+               joinColumns={@JoinColumn(name="Users_user_id", referencedColumnName = "user_id")}, 
+               inverseJoinColumns={@JoinColumn(name="productos_producto_id", referencedColumnName = "producto_id")})
     List<Product> products;
 }
 ```
@@ -86,14 +84,21 @@ public class User {
 public class Dni {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "dni_id")
-    private Long id;
+    @Column(name = "dni_id", nullable = false, unique = true)
+    Integer dniId;
 
-    @Column(name = "number", unique = true, nullable = false)
-    private String number;
+    @Column(name = "number", nullable = false, unique = true, length = 9)
+    String number;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+    @Column(name = "front_img")
+    String frontImg;
+
+    @Column(name = "back_img")
+    String backImg;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="Users_user_id", referencedColumnName = "user_id")
+    @JsonIgnore
     User owner;
 }
 ```
@@ -108,25 +113,23 @@ public class Dni {
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "producto_id")
-    private Long id;
-
-    @Column(name = "product_name")
+    @Column(name = "producto_id")    
+    private  Long id;  
+    @Column (name = "product_name" ) 
     private String name;
-
-    @Column(name = "description")
+    @Column (name = "description" ) 
     private String description;
-
-    @Column(name = "price")
+    @Column (name = "price" ) 
     private Double price;
-
-    @Column(name = "image_url")
+    @Column (name = "image_url") 
     private String imageUrl;
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", referencedColumnName = "category_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    Category category; 
+    @ManyToMany(mappedBy="products", fetch = FetchType.LAZY)
     @JsonIgnore
-    Category category;
+    List<User> usersWhobought;
 }
 ```
 
@@ -139,15 +142,15 @@ public class Product {
 @Table(name = "categorias")
 public class Category {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
-    private Long id;
+    @Column (name = "category_id")
+    private Long categoryId;
 
-    @Column(name = "category_name")
-    private String name;
-
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    List<Product> products;
+    @Column (name = "category_name")
+    private String categoryName;    
+    
+     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+     @JsonIgnore
+    private List<Product> products;
 }
 ```
 
@@ -202,16 +205,16 @@ Ruta base: `/api/v1/products`
 Ejemplo de respuesta JSON:
 ```json
 {
-  "id": 1,
-  "name": "Teclado mecánico",
-  "description": "Teclado retroiluminado RGB",
-  "price": 49.99,
-  "imageUrl": "https://example.com/keyboard.jpg",
-  "category": {
-    "id": 1,
-    "name": "Periféricos"
+    "id": 3,
+    "name": "Reloj Apple Watch Series 9",
+    "description": "Smartwatch con monitor de salud y GPS",
+    "price": 449.0,
+    "imageUrl": "https://example.com/images/watch1.jpg",
+    "category": {
+      "categoryId": 1,
+      "categoryName": "Electrónica"
+    }
   }
-}
 ```
 
 ---
@@ -240,7 +243,7 @@ Este repositorio sirve como **apunte práctico** de cómo implementar:
 - Arquitectura **MVC** en Spring Boot  
 - Capa de persistencia con **JPA y Hibernate**
 - **Relaciones entre entidades** (1:1, 1:N, N:M)
-- Buenas prácticas de **DTOs**, **servicios**, y **controladores REST**
+
 
 ---
 
